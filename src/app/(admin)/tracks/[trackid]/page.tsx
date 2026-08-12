@@ -12,18 +12,18 @@ export default async function Page({params} : Props) {
 interface Props {
   params: {
     trackid: string;
-  },
+  };
   searchParams: {
-    mode: string,
-    showTitle: string,
-    anotherParam: string
-  }
+    mode: string;
+    showTitle: string;
+    anotherParam: string;
+  };
 }
 
 export default async function Page({ params, searchParams }: Props) {
-  const p = await params
-  const trackid = p.trackid
-  const sP = await searchParams
+  const p = await params;
+  const trackid = p.trackid;
+  const sP = await searchParams;
   const mode = sP.mode;
   const showTitle = sP.showTitle;
   const anotherParam = sP.anotherParam;
