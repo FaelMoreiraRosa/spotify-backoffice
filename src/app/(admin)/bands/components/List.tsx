@@ -1,9 +1,9 @@
-import Button from "../../components/Button";
+import Button from "@/app/components/Button";
 
-type Band = {
+interface Band {
   name: string;
   status: string;
-};
+}
 
 const TableRow = ({ name, status }: Band) => {
   return (
@@ -35,14 +35,14 @@ export default function List() {
               Nome
             </th>
             <th scope="col" className="px-6 py-3">
-              Nome
+              Status
             </th>
             <th scope="col" className="px-6 py-3"></th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          <TableRow name="Henrique & Juliano" status="ativo"></TableRow>
-          <TableRow name="Capital Inicial" status="ativo"></TableRow>
+          <TableRow name="Henrique & Juliano" status="Ativo"></TableRow>
+          <TableRow name="Capital Inicial" status="Ativo"></TableRow>
         </tbody>
       </table>
     </section>
