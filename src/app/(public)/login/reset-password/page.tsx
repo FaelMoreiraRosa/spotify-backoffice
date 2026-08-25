@@ -1,6 +1,3 @@
 export default function Page() {
-  return (
-  <div>
-    <h1>Resetar a senha</h1>
-  </div>);
+  return <h1>Redefinir a Senha</h1>;
 }

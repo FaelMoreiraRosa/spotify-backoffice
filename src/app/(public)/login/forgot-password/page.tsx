@@ -1,6 +1,3 @@
 export default function Page() {
-  return (
-  <div>
-    <h1>Esqueci a senha</h1>
-  </div>);
+  return <h1>Esqueci a Senha</h1>;
 }
