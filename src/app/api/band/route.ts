@@ -2,24 +2,41 @@ import path from "node:path";
 import crypto from "node:crypto";
 import prisma from "../../../../lib/prisma";
 import { mkdir, writeFile } from "node:fs/promises";
-import { BandSchema } from "@/app/schemas/band.schema";
 import * as z from "zod/v4";
-import { PrismaClientInitializationError, PrismaClientKnownRequestError } from "../../../../generated/prisma/internal/prismaNamespace";
+import { BandSchema } from "@/app/schemas/band.schema";
+import {
+  PrismaClientInitializationError,
+  PrismaClientKnownRequestError,
+} from "../../../../generated/prisma/runtime/library";
 import { CustomError } from "@/app/utils/CustomError";
+import { NextRequest } from "next/dist/server/web/spec-extension/request";
+
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const { searchParams } = url;
+  console.log("url");
+  // skip (offset), take (limit)
+  const currentPage: number = parseInt(searchParams.get("page") || "1");
+  const take: number = parseInt(searchParams.get("take") || "10");
+  const skip: number = (currentPage - 1) * take;
 
 
-export async function GET() {
-  const bands = await prisma.band.findMany();
-  return Response.json(bands);
+  const totalItems = await prisma.band.count();
+  const bands = await prisma.band.findMany({
+    skip: skip,
+    take: take,
+    orderBy: { createdAt: "desc" },
+  });
+  
+  const totalPages = Math.ceil (totalItems / take) 
+  return Response.json({ pagination: { currentPage, totalItems, totalPages }, bands});
 }
+
 // FormData (abordagem)
-
 export async function POST(request: Request) {
-
   try {
     const formData = await request.formData();
     console.log(formData);
-
 
     const data = {
       name: formData.get("name"),
@@ -32,17 +49,19 @@ export async function POST(request: Request) {
     const validatedData = BandSchema.parse(data);
 
     // TODO: Verificar se o registro já existe!
-    const BandExists = await prisma.band.findFirst({
-      where:{
+    const bandExists = await prisma.band.findFirst({
+      where: {
         name: validatedData.name,
-      }
-    })
+      },
+    });
 
-    if(BandExists){
-        throw new CustomError("Banda ja cadastrada", 409)
+    // truthy, falsy
+    if (bandExists) {
+      throw new CustomError("Banda já cadastrada", 409);
     }
+
     if (!(data.cover instanceof File)) {
-      throw new CustomError ("Tipo inválido de arquivo", 400);
+      throw new CustomError("Tipo inválido de arquivo", 400);
     }
 
     const arrayBuffer = await data.cover.arrayBuffer();
@@ -51,21 +70,20 @@ export async function POST(request: Request) {
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     await mkdir(uploadDir, { recursive: true });
 
-    // define um nome unico para o arquivo
+    // define um nome único para o arquivo:
     const uniqueName = crypto.randomUUID();
     const extension = path.extname(data.cover.name);
     const fileName = `${uniqueName}${extension}`;
-    console.log(`Nome do arquivo atualizado: ${fileName}`);
 
     const filePath = path.join(uploadDir, fileName);
     await writeFile(filePath, buffer);
 
-    //inserir os dados no banco de dados
+    // Inserir os dados no banco de dados
     const insertedItem = await prisma.band.create({
       data: {
         name: validatedData.name,
         slug: validatedData.slug,
-        description: validatedData.status,
+        description: validatedData.description,
         status: validatedData.status,
         coverUrl: fileName,
       },
@@ -77,7 +95,8 @@ export async function POST(request: Request) {
       filePath: `/uploads/${data.cover.name}`,
     });
   } catch (error: unknown) {
-    console.log("Erro desconhecido: ", error);
+    console.error("Erro capturado: ", error);
+
     if (error instanceof z.ZodError) {
       return Response.json(
         { error: "Erro de validação", details: error.issues },
@@ -92,31 +111,29 @@ export async function POST(request: Request) {
       );
     }
 
-    if(error instanceof PrismaClientKnownRequestError){
-      return Response.json(
-        { error: error.message },
-        { status: 500 }
-      )
+    if (error instanceof PrismaClientKnownRequestError) {
+      return Response.json({ error: error.message }, { status: 500 });
     }
-    if(error instanceof CustomError){
+
+    if (error instanceof CustomError) {
       return Response.json(
         {
           error: error.message,
         },
         { status: error.statusCode },
-      )
+      );
     }
+
     if (error instanceof Error) {
       return Response.json(
         {
           error:
-            "Erro interno do servidor. Solicite para equipe responsavel a avaliação dos logs de erros!",
+            "Erro interno do servidor. Solicite para equipe responsável a avaliação dos logs de erros.",
         },
         { status: 500 },
       );
     }
 
-    console.log("Erro desconhecido: ", error);
     return Response.json(
       { error: "Erro desconhecido (erro interno do servidor)" },
       { status: 500 },
@@ -124,53 +141,47 @@ export async function POST(request: Request) {
   }
 }
 
-/*
-
-
-
-}
-*/
 // JSON (abordagem)
-/*export async function POST(request: Request) {
-  try {
-    const data = await request.json();
+// export async function POST(request: Request) {
+//   try {
+//     const data = await request.json();
 
-    if (typeof data === "object" && data !== null) {
-      const validatedData = BandSchema.parse(data);
-      // TODO: Armazenar os dados no banco de dados
-      return Response.json({ msg: "JSON (único)", validatedData });
-    } else {
-      return Response.json(
-        { error: "Dados encaminhados em um formato inválido" },
-        { status: 400 },
-      );
-    }
-  } catch (error: unknown) {
-    if (error instanceof SyntaxError) {
-      console.error(
-        "Erro de sintaxe ao ler o JSON do Body da requisição",
-        error.message,
-      );
-      return Response.json(
-        { error: "Conteúdo (body) da requisição está inválido!" },
-        { status: 400 },
-      );
-    }
+//     if (typeof data === "object" && data !== null) {
+//       const validatedData = BandSchema.parse(data);
+//       // TODO: Armazenar os dados no banco de dados
+//       return Response.json({ msg: "JSON (único)", validatedData });
+//     } else {
+//       return Response.json(
+//         { error: "Dados encaminhados em um formato inválido" },
+//         { status: 400 },
+//       );
+//     }
+//   } catch (error: unknown) {
+//     if (error instanceof SyntaxError) {
+//       console.error(
+//         "Erro de sintaxe ao ler o JSON do Body da requisição",
+//         error.message,
+//       );
+//       return Response.json(
+//         { error: "Conteúdo (body) da requisição está inválido!" },
+//         { status: 400 },
+//       );
+//     }
 
-    if (error instanceof z.ZodError) {
-      return Response.json(
-        { error: "Erro de validação", details: error.issues },
-        { status: 400 },
-      );
-    }
+//     if (error instanceof z.ZodError) {
+//       return Response.json(
+//         { error: "Erro de validação", details: error.issues },
+//         { status: 400 },
+//       );
+//     }
 
-    console.log("Erro desconhecido: ", error);
-    return Response.json(
-      { error: "Erro desconhecido (erro interno do servidor)" },
-      { status: 500 },
-    );
-  }
-}*/
+//     console.log("Erro desconhecido: ", error);
+//     return Response.json(
+//       { error: "Erro desconhecido (erro interno do servidor)" },
+//       { status: 500 },
+//     );
+//   }
+// }
 
 // URL Enconded (abordagem)
 // export async function POST(request: Request) {

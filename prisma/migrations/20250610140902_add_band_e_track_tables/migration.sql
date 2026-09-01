@@ -10,7 +10,6 @@ CREATE TABLE "bands" (
     "status" "Status" NOT NULL DEFAULT 'active',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
-    "cover_url" TEXT,
 
     CONSTRAINT "bands_pkey" PRIMARY KEY ("id")
 );
@@ -23,7 +22,6 @@ CREATE TABLE "tracks" (
     "duration_in_seconds" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
-    "band_id" UUID NOT NULL,
 
     CONSTRAINT "tracks_pkey" PRIMARY KEY ("id")
 );
@@ -36,9 +34,3 @@ CREATE UNIQUE INDEX "bands_slug_key" ON "bands"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "tracks_slug_key" ON "tracks"("slug");
-
--- CreateIndex
-CREATE INDEX "tracks_band_id_idx" ON "tracks"("band_id");
-
--- AddForeignKey
-ALTER TABLE "tracks" ADD CONSTRAINT "tracks_band_id_fkey" FOREIGN KEY ("band_id") REFERENCES "bands"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -1,7 +1,6 @@
 networks:
   spotify-network:
-    name: spotify-network
-    driver: bridge
+    external: true # Conecta à rede existente onde o Postgres está rodando
 
 services:
   spotify-backoffice:
@@ -12,6 +11,8 @@ services:
       target: dev
     image: spotify-backoffice:latest
     command: sh -c "npm install && npm run dev"
+    env_file:
+      - .env # Passa as variáveis do .env (como a DATABASE_URL) para o container
     networks:
       - spotify-network
     ports:

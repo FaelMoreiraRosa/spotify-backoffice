@@ -1,7 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
-  binaryTargets = "linux-musl-openssl-3.0.x"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -18,7 +17,7 @@ model Band {
   status      Status   @default(active)
   createdAt   DateTime @default(now()) @map("created_at") // camelCase no model -> snake_case no banco de dados
   updatedAt   DateTime @updatedAt @map("updated_at")
-  coverUrl    String?   @map("cover_url")
+  coverUrl    String?  @map("cover_url")
 
   // Estabelecendo o relacionamento: 1 Band -> N Tracks
   tracks Track[] @relation("BandTracks")
