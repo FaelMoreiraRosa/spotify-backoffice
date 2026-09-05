@@ -1,4 +1,4 @@
-import z from "zod/v4";
+import z from "zod";
 
 const MAX_SIZE_MB = 5;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png"];
@@ -9,12 +9,12 @@ export const BandSchema = z.object({
   description: z.string().optional(),
   status: z.enum(["active", "inactive"]),
   cover: z
-    .instanceof(File)
-    .refine((file) => file.size > 0, { message: "Arquivo é obrigatório" })
-    .refine((file) => file.size < MAX_SIZE_MB * 1024 * 1024, {
+    .custom <FileList>((fileList) => fileList instanceof FileList && fileList.length > 0 )
+    .refine((fileList) => fileList[0].size > 0, { message: "Arquivo é obrigatório" })
+    .refine((fileList) => fileList[0].size < MAX_SIZE_MB * 1024 * 1024, {
       message: `O tamanho máximo permitido é de ${MAX_SIZE_MB}MB`,
-    })
-    .refine((file) => ACCEPTED_TYPES.includes(file.type), {
+    })  
+    .refine((fileList) => ACCEPTED_TYPES.includes(fileList[0].type), {
       message: `Tipo inválido. Permitidos: ${ACCEPTED_TYPES.join(", ")}`,
     }),
 });

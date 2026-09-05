@@ -30,7 +30,7 @@ const TableRow = ({ band }: { band: Band }) => {
         </span>
       </td>
       <td className="text-right font-sm space-x-4 whitespace-nowrap">
-        <Button>Editar</Button>l
+        <Button>Editar</Button>
         <Button>Excluir</Button>
       </td>
     </tr>
