@@ -30,7 +30,7 @@ const TableRow = ({ band }: { band: Band }) => {
         </span>
       </td>
       <td className="text-right font-sm space-x-4 whitespace-nowrap">
-        <Button>Editar</Button>l
+        <Button>Editar</Button>
         <Button>Excluir</Button>
       </td>
     </tr>
@@ -40,15 +40,15 @@ const TableRow = ({ band }: { band: Band }) => {
 export default function List() {
   const [data, setData] = useState<BandList | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [currentPage, setCurrentPage] = useState<number>(6);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-    useEffect(() => {
-      const fetchBands = async (page: number) => {
-        try {
-          setData(null);
-          setLoading(true);
+  useEffect(() => {
+    const fetchBands = async (page: number) => {
+      try {
+        setData(null);
+        setLoading(true);
         const response = await fetch(
-          `http://localhost:3001/api/band?page=${page}&take=4`,
+          `http://localhost:3001/api/band?page=${page}&take=10`,
         );
         const bandList: BandList = await response.json();
         setData(bandList);
@@ -92,7 +92,11 @@ export default function List() {
       </table>
 
       {data?.pagination.totalPages && (
-        <Pagination totalPages={data.pagination.totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+        <Pagination
+          totalPages={data?.pagination.totalPages}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+        />
       )}
     </>
   );

@@ -9,41 +9,47 @@ import {
   PrismaClientKnownRequestError,
 } from "../../../../generated/prisma/runtime/library";
 import { CustomError } from "@/app/utils/CustomError";
-import { NextRequest } from "next/dist/server/web/spec-extension/request";
+import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const { searchParams } = url;
-  console.log("url");
+  console.log(searchParams);
+
   // skip (offset), take (limit)
-  const currentPage: number = parseInt(searchParams.get("page") || "1");
+
+  const currentPage: number = parseInt(searchParams.get("page") || "1"); // página atual
   const take: number = parseInt(searchParams.get("take") || "10");
   const skip: number = (currentPage - 1) * take;
 
-
   const totalItems = await prisma.band.count();
+
   const bands = await prisma.band.findMany({
-    skip: skip,
-    take: take,
+    skip,
+    take,
     orderBy: { createdAt: "desc" },
   });
-  
-  const totalPages = Math.ceil (totalItems / take) 
-  return Response.json({ pagination: { currentPage, totalItems, totalPages }, bands});
+
+  const totalPages = Math.ceil(totalItems / take);
+  return Response.json({
+    pagination: { currentPage, totalItems, totalPages },
+    bands,
+  });
 }
 
 // FormData (abordagem)
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    console.log(formData);
+
+    const cover = formData.getAll("cover") as File[];
 
     const data = {
       name: formData.get("name"),
       slug: formData.get("slug"),
       description: formData.get("description") || "",
       status: formData.get("status"),
-      cover: formData.get("cover"),
+      cover,
     };
 
     const validatedData = BandSchema.parse(data);
@@ -60,11 +66,7 @@ export async function POST(request: Request) {
       throw new CustomError("Banda já cadastrada", 409);
     }
 
-    if (!(data.cover instanceof File)) {
-      throw new CustomError("Tipo inválido de arquivo", 400);
-    }
-
-    const arrayBuffer = await data.cover.arrayBuffer();
+    const arrayBuffer = await data.cover[0].arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     const uploadDir = path.join(process.cwd(), "public", "uploads");
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
 
     // define um nome único para o arquivo:
     const uniqueName = crypto.randomUUID();
-    const extension = path.extname(data.cover.name);
+    const extension = path.extname(data.cover[0].name);
     const fileName = `${uniqueName}${extension}`;
 
     const filePath = path.join(uploadDir, fileName);
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
     return Response.json({
       msg: "FormData",
       insertedItem,
-      filePath: `/uploads/${data.cover.name}`,
+      filePath: `/uploads/${data.cover[0].name}`,
     });
   } catch (error: unknown) {
     console.error("Erro capturado: ", error);
@@ -145,11 +147,12 @@ export async function POST(request: Request) {
 // export async function POST(request: Request) {
 //   try {
 //     const data = await request.json();
-
+//     console.log("Recebemos os dados do Form: ", data);
 //     if (typeof data === "object" && data !== null) {
-//       const validatedData = BandSchema.parse(data);
+//       // const validatedData = BandSchema.parse(data);
 //       // TODO: Armazenar os dados no banco de dados
-//       return Response.json({ msg: "JSON (único)", validatedData });
+//       //return Response.json({ msg: "JSON (único)", validatedData });
+//       return Response.json({ msg: "JSON (único)", data });
 //     } else {
 //       return Response.json(
 //         { error: "Dados encaminhados em um formato inválido" },
@@ -194,18 +197,23 @@ export async function POST(request: Request) {
 //     const status = params.get("status");
 
 //     // Validação dos dados
-//     const validatedData = BandSchema.parse({
-//       name: name,
-//       slug: slug,
-//       description: description || "",
-//       status: status,
-//     });
+//     // const validatedData = BandSchema.parse({
+//     //   name: name,
+//     //   slug: slug,
+//     //   description: description || "",
+//     //   status: status,
+//     // });
 
 //     // TODO: Armazenar os dados no banco de dados
 
+//     // return Response.json({
+//     //   msg: "URL Encoded",
+//     //   validatedData,
+//     // });
+
 //     return Response.json({
 //       msg: "URL Encoded",
-//       validatedData,
+//       data: { name, slug, description, status },
 //     });
 //   } catch (error: unknown) {
 //     if (error instanceof z.ZodError) {
