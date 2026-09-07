@@ -1,11 +1,9 @@
-"use client";
-
 import Button from "@/app/components/Button";
 import { BandSchema } from "@/app/schemas/band.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { Dispatch, SetStateAction } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
-import { z } from "zod";
+import { Dispatch, SetStateAction } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod/v4";
 
 interface Props {
   setIsOpen: Dispatch<SetStateAction<boolean>>;
@@ -14,42 +12,84 @@ interface Props {
 type BandFormData = z.infer<typeof BandSchema>;
 
 export default function Create({ setIsOpen }: Props) {
+  // handleSubmit -> processa o envio do formulário
+  // formState -> estado do formulário
+  // register -> conecta os inputs do formulário ao React Hook Form
   const { register, handleSubmit, formState } = useForm<BandFormData>({
     resolver: zodResolver(BandSchema),
+    // resolver -> integra biblioteca de validação externa (zod, yup, joi, etc)
     defaultValues: {
       status: "active",
-    }
+    },
   });
 
-  const onSubmit: SubmitHandler<BandFormData> = (data) => {
-    console.log("Dados válidos, podemos enviar o formulário: ", data);
+  console.log(formState.errors);
+
+  const onSubmit = async (band: BandFormData) => {
+    try {
+      const bandJSON = JSON.stringify(band);
+
+      const bandURLEncoded = new URLSearchParams({
+        name: band.name,
+        slug: band.slug,
+        description: band.description || "",
+        status: band.status,
+      });
+
+      const bandFormData = new FormData();
+
+      bandFormData.append("name", band.name);
+      bandFormData.append("slug", band.slug);
+      bandFormData.append("description", band.description || "");
+      bandFormData.append("status", band.status);
+
+      Array.from(band.cover).forEach((cover) => {
+        bandFormData.append("cover", cover);
+      });
+
+      // for (const [key, value] of bandFormData.entries()) {
+      //   console.log(key, value);
+      // }
+
+      // console.log("Objeto: ", band);
+      // console.log("JSON: ", bandJSON);
+      // console.log("URL Encoded: ", bandURLEncoded.toString());
+      // console.log("FormData: ", bandFormData);
+
+      const response = await fetch("http://localhost:3001/api/band", {
+        method: "POST",
+        body: bandFormData,
+      });
+
+      const data = await response.json();
+      console.log("Resposta: ", data);
+    } catch (e: unknown) {
+      console.error("Error: ", e);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white p-8 m-18 rounded shadow-lg w-full max-w-3xl relati ve">
+      <div className="bg-white p-8 rounded shadow-lg w-full max-w-3xl relative">
         <button
-          className="absolute top-4 right-8 text-gray-500 hover:text-gray-800 text-3xl font-bold hover:cursor-pointer h-8 w-8 font-size-2xl flex items-center justify-center"
-          aria-label="Fechar"
           onClick={() => setIsOpen(false)}
+          className="absolute top-4 right-8 text-gray-500 hover:text-gray-800 text-4xl font-bold hover:cursor-pointer"
+          arial-label="Fechar"
         >
-          &#x2715;
+          &times;
         </button>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Criar Banda
+          Cadastrar Banda
         </h2>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={handleSubmit(onSubmit)}
-        >
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
           <div>
             <span className="font-semibold text-sm">Nome:</span>
             <input
               {...register("name")}
               type="text"
-              className="w-full p-2 rounded border"
-              placeholder="Ex: Legião Urbana"
-            />
+              placeholder="Legião Urbana"
+              className="w-full p-2 border rounded"
+            ></input>
             {formState?.errors?.name && (
               <p className="text-red-500 text-sm">
                 {formState.errors.name.message}
@@ -62,10 +102,9 @@ export default function Create({ setIsOpen }: Props) {
             <input
               {...register("slug")}
               type="text"
-              id="slug"
-              className="w-full p-2 rounded border"
-              placeholder="Ex: legiao-urbana"
-            />
+              placeholder="legiao-urbana"
+              className="w-full p-2 border rounded"
+            ></input>
             {formState?.errors?.slug && (
               <p className="text-red-500 text-sm">
                 {formState.errors.slug.message}
@@ -77,10 +116,8 @@ export default function Create({ setIsOpen }: Props) {
             <span className="font-semibold text-sm">Descrição:</span>
             <textarea
               {...register("description")}
-              id="description"
-              className="w-full p-2 rounded border block"
-              placeholder="Ex: Banda de rock brasileira"
-            />
+              className="w-full p-2 border rounded block"
+            ></textarea>
             {formState?.errors?.description && (
               <p className="text-red-500 text-sm">
                 {formState.errors.description.message}
@@ -93,18 +130,18 @@ export default function Create({ setIsOpen }: Props) {
             <input
               {...register("cover")}
               type="file"
-              accept=".png,.jpg,.jpeg"
-              id="cover"
-              className="w-full rounded border file:bg-gray-200"
-            />
+              accept=".png, .jpg, .jpeg"
+              className="w-full border rounded file:p-2 file:bg-gray-200"
+            ></input>
             {formState?.errors?.cover && (
               <p className="text-red-500 text-sm">
-                {String(formState.errors.cover.message)}
+                {formState.errors.cover.message}
               </p>
             )}
           </div>
-          <div className="flex justify-end p-2">
-            <Button type="submit">Criar Banda</Button>
+
+          <div className="flex justify-end">
+            <Button>Adicionar</Button>
           </div>
         </form>
       </div>

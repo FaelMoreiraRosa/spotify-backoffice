@@ -1,11 +1,11 @@
 import Button from "@/app/components/Button";
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
 interface Props {
   setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-interface formErrors {
+interface FormErros {
   name: null | string;
   slug: null | string;
   description: null | string;
@@ -17,7 +17,7 @@ export default function Create({ setIsOpen }: Props) {
   const [slug, setSlug] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [cover, setCover] = useState<FileList | null>(null);
-  const [errors, setErrors] = useState<formErrors | undefined>(undefined);
+  const [errors, setErros] = useState<FormErros | undefined>(undefined);
 
   useEffect(() => {
     console.log(errors);
@@ -25,14 +25,17 @@ export default function Create({ setIsOpen }: Props) {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    validateForm();
-    //TODO enviar para API
+    if (validateForm()) {
+      console.log("Podemos enviar o formulário, pois ele está válido");
+    } else {
+      console.log("Erro de validação");
+    }
   };
 
   const validateForm = () => {
     let formIsValid: boolean = true;
 
-    const validateErrors: formErrors = {
+    const validateErros: FormErros = {
       name: null,
       slug: null,
       description: null,
@@ -40,118 +43,112 @@ export default function Create({ setIsOpen }: Props) {
     };
 
     if (!name.trim()) {
-      validateErrors.name = "O nome é obrigatório.";
+      validateErros.name = "O nome é obrigatório.";
       formIsValid = false;
     }
 
     if (name.length < 3) {
-      validateErrors.name =
-        "O nome da banda está incorreto (menos de 3 caracteres).";
+      validateErros.name = "O nome está incorreto (menos de 3 caracteres).";
       formIsValid = false;
     }
 
     if (!slug.trim()) {
-      validateErrors.slug = "O slug é obrigatório.";
+      validateErros.slug = "O slug é obrigatório.";
       formIsValid = false;
     }
 
     if (!description.trim()) {
-      validateErrors.description = "A descrição é obrigatória.";
+      validateErros.description = "A descrição é obrigatório.";
       formIsValid = false;
     }
 
     if (!cover) {
-      validateErrors.cover = "A capa é obrigatória.";
+      validateErros.cover = "A capa é obrigatória.";
       formIsValid = false;
     } else {
-      if (
-        !["image/png", "jimage/jpg", "image/jpeg"].includes(cover?.[0].type)
-      ) {
-        validateErrors.cover = "A capa deve ter a extensão png, jpeg ou jpg";
+      console.log(cover?.[0].type);
+      if (!["image/png", "image/jpeg", "image/jpg"].includes(cover?.[0].type)) {
+        validateErros.cover = "A capa deve ter a extensão png, jpeg ou jpg.";
         formIsValid = false;
       }
     }
 
-    console.log();
-
-    setErrors(validateErrors);
+    setErros(validateErros);
     return formIsValid;
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white p-8 m-18 rounded shadow-lg w-full max-w-3x1 relative">
+      <div className="bg-white p-8 rounded shadow-lg w-full max-w-3xl relative">
         <button
-          className="absolute top-4 right-8 text-gray-500 hover:text-gray-800 text-3xl font-bold hover:cursor-pointer h-8 w-8 font-size-2xl flex items-center justify-center"
-          aria-label="Fechar"
           onClick={() => setIsOpen(false)}
+          className="absolute top-4 right-8 text-gray-500 hover:text-gray-800 text-4xl font-bold hover:cursor-pointer"
+          arial-label="Fechar"
         >
-          &#x2715;
+          &times;
         </button>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Criar Banda
+          Cadastrar Banda
         </h2>
-        <form onSubmit={handleSubmit} action="" className="flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div>
             <span className="font-semibold text-sm">Nome:</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               type="text"
-              name="name"
-              id="name"
-              className="w-full p-2 rounded border"
-              placeholder="Ex: Legião Urbana"
-            />
+              placeholder="Legião Urbana"
+              className="w-full p-2 border rounded"
+            ></input>
             {errors?.name && (
               <p className="text-red-500 text-sm">{errors.name}</p>
             )}
+          </div>
 
+          <div>
             <span className="font-semibold text-sm">Slug:</span>
             <input
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               type="text"
-              name="slug"
-              id="slug"
-              className="w-full p-2 rounded border"
-              placeholder="Ex: legiao-urbana"
-            />
+              placeholder="legiao-urbana"
+              className="w-full p-2 border rounded"
+            ></input>
             {errors?.slug && (
               <p className="text-red-500 text-sm">{errors.slug}</p>
             )}
+          </div>
 
+          <div>
             <span className="font-semibold text-sm">Descrição:</span>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              name="description"
-              id="description"
-              className="w-full p-2 rounded border block"
-              placeholder="Ex: Banda de rock brasileira"
-            />
+              className="w-full p-2 border rounded block"
+            ></textarea>
             {errors?.description && (
               <p className="text-red-500 text-sm">{errors.description}</p>
             )}
+          </div>
 
+          <div>
             <span className="font-semibold text-sm">Capa:</span>
             <input
-              onChange={(e) => setCover(e.target.files)}
               type="file"
-              accept=".png,.jpg,.jpeg"
-              name="cover"
-              id="cover"
-              className="w-full rounded border file:bg-gray-200"
+              onChange={(e) => setCover(e.target.files)}
+              accept=".png, .jpg, .jpeg"
+              className="w-full border rounded file:p-2 file:bg-gray-200"
             ></input>
             {errors?.cover && (
               <p className="text-red-500 text-sm">{errors.cover}</p>
             )}
           </div>
-          <div className="flex justify-end p-2">
-            <Button>Criar Banda</Button>
+
+          <div className="flex justify-end">
+            <Button>Adicionar</Button>
           </div>
         </form>
       </div>
-    </div>  
+    </div>
   );
 }
