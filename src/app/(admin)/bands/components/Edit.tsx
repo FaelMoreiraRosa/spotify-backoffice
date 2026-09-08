@@ -1,30 +1,37 @@
 import Button from "@/app/components/Button";
 import Loading from "@/app/components/Loading";
-import { BandSchema } from "@/app/schemas/band.schema";
+import { BandPatchSchema } from "@/app/schemas/band.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod/v4";
 import toast from "react-hot-toast";
+import { Band } from "../../../../../generated/prisma";
+import Image from "next/image";
 
 interface Props {
+  band: Band;
   setIsOpen: Dispatch<SetStateAction<boolean>>;
   onSuccess: () => void;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
 }
 
-type BandFormData = z.infer<typeof BandSchema>;
+type BandFormData = z.infer<typeof BandPatchSchema>;
 
-export default function Create({
+export default function Edit({
+  band,
   setIsOpen,
   onSuccess,
   setCurrentPage,
 }: Props) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [changeCover, setChangeCover] = useState<boolean>(false);
 
-  const { register, handleSubmit, formState } = useForm<BandFormData>({
-    resolver: zodResolver(BandSchema),
+  const { register, handleSubmit, formState, reset } = useForm<BandFormData>({
+    resolver: zodResolver(BandPatchSchema),
+    shouldUnregister: true,
     defaultValues: {
+      id: band.id,
       status: "active",
     },
   });
@@ -35,29 +42,32 @@ export default function Create({
 
       const bandFormData = new FormData();
 
+      bandFormData.append("id", band.id);
       bandFormData.append("name", band.name);
       bandFormData.append("slug", band.slug);
       bandFormData.append("description", band.description || "");
       bandFormData.append("status", band.status);
 
-      Array.from(band.cover).forEach((cover) => {
-        bandFormData.append("cover", cover);
-      });
+      if (band.cover) {
+        Array.from(band.cover).forEach((cover) => {
+          bandFormData.append("cover", cover);
+        });
+      }
 
       const response = await fetch("http://localhost:3001/api/band", {
-        method: "POST",
+        method: "PATCH",
         body: bandFormData,
       });
 
-      if (response.status === 201) {
-        toast.success("Cadastro realizado com sucesso");
+      if (response.status === 200) {
+        toast.success("Banda atualizada com sucesso");
         onSuccess();
         setCurrentPage(1);
         setIsOpen(false);
-      } else if (response.status === 409) {
-        toast.error("Banda já cadastrada anteriormente!");
+      } else if (response.status === 404) {
+        throw new Error("Registro de banda não localizado");
       } else {
-        throw new Error("Erro ao cadastrar a banda");
+        throw new Error("Erro ao atualizar a banda");
       }
     } catch (e: unknown) {
       console.error("Error: ", e);
@@ -65,12 +75,23 @@ export default function Create({
       if (e instanceof Error) {
         toast.error(e.message);
       } else {
-        toast.error("Erro ao cadastrar a banda");
+        toast.error("Erro ao atualizar a banda");
       }
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (band) {
+      reset({
+        name: band.name,
+        slug: band.slug,
+        description: band.description || "",
+        status: band.status,
+      });
+    }
+  }, [band, reset]);
 
   return (
     <>
@@ -84,12 +105,13 @@ export default function Create({
             &times;
           </button>
           <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Cadastrar Banda
+            Atualizar Banda
           </h2>
           <form
             onSubmit={handleSubmit(onSubmit)}
             className="flex flex-col gap-3"
           >
+            <input {...register("id")} type="hidden" />
             <div>
               <span className="font-semibold text-sm">Nome:</span>
               <input
@@ -134,19 +156,58 @@ export default function Create({
             </div>
 
             <div>
-              <span className="font-semibold text-sm">Capa:</span>
-              <input
-                {...register("cover")}
-                type="file"
-                accept=".png, .jpg, .jpeg"
-                className="w-full border rounded file:p-2 file:bg-gray-200"
-              ></input>
-              {formState?.errors?.cover && (
+              <span className="font-semibold text-sm">Status:</span>
+              <select
+                {...register("status")}
+                className="w-full p-2 border rounded"
+              >
+                <option value="active">Ativo</option>
+                <option value="inactive">Inativo</option>
+              </select>
+              {formState?.errors?.status && (
                 <p className="text-red-500 text-sm">
-                  {formState.errors.cover.message}
+                  {formState.errors.status.message}
                 </p>
               )}
             </div>
+
+            <div>
+              <span className="font-semibold text-sm">Capa atual:</span>
+              <div className="space-y-2">
+                <div className="relative w-full h-48 rounded-lg overflow-hidden">
+                  <Image
+                    src={`/uploads/${band.coverUrl}`}
+                    alt="Capa atual"
+                    width={420}
+                    height={420}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              <a href="#" onClick={() => setChangeCover(true)}>
+                Alterar capa
+              </a>
+            </div>
+
+            {changeCover && (
+              <div>
+                <span className="font-semibold text-sm">Capa:</span>
+                <input
+                  {...register("cover")}
+                  type="file"
+                  accept=".png, .jpg, .jpeg"
+                  className="w-full border rounded file:p-2 file:bg-gray-200"
+                ></input>
+                <a href="#" onClick={() => setChangeCover(false)}>
+                  Cancelar - Manter a capa atual
+                </a>
+                {formState?.errors?.cover && (
+                  <p className="text-red-500 text-sm">
+                    {formState.errors.cover.message}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-end">
               <Button
@@ -156,7 +217,7 @@ export default function Create({
                 {isLoading ? (
                   <Loading width={20} height={20} showText={false} />
                 ) : (
-                  "Adicionar"
+                  "Salvar"
                 )}
               </Button>
             </div>
